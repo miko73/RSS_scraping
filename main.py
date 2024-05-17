@@ -14,6 +14,14 @@ import datetime
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
+import shutil
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+
+from email import encoders
+
 log_filename='log.txt'
 stored_couneter = 0
 
@@ -35,6 +43,47 @@ def my_print(*args, **kwargs):
 
         # Vrácení původního sys.stdout
         sys.stdout = original_stdout
+
+def sent_file_by_mail(fille_path, receiver_email ):
+    sender_email = "michal.kocandrle@gmail.com"
+    app_password = os.getenv('EMAIL_PASSWORD')
+
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(sender_email, app_password)
+
+    # Zde napište kód pro odeslání emailu
+    # Vytvořit objekt MIMEMultipart
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = "desky"
+
+    # Přidat textový obsah zprávy
+    body = "Uprabene uredni desky"
+    msg.attach(MIMEText(body, 'plain'))
+
+    # Nastavit cestu k souboru, který chcete poslat
+    file_path = "path_to_your_file.txt"
+
+    # Přidat soubor jako přílohu
+    attachment = open(file_path, "rb")
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload((attachment).read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', "attachment; filename= %s" % file_path)
+    msg.attach(part)
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, app_password)
+        text = msg.as_string()
+        server.sendmail(sender_email, receiver_email, text)
+        server.quit()
+        print("Email byl úspěšně odeslán.")
+    except Exception as e:
+        print("Chyba při odesílání emailu:", str(e))
+
 
 def process_links(base_url, url, deska_name):
     # Stáhneme stránku
@@ -268,6 +317,20 @@ def scrap_rss(base_url, url, deska_name):
         process_links(base_url, url, deska_name)
         # Vrácení původního sys.stdout
         # sys.stdout = original_stdout
+
+        # Define the source file path and destination file path
+        try:
+            one_drive_backup = f'C:\\Users\\miko\\OneDrive\\desky\\{log_filename}'
+            # one_drive_backup = f'C:\\Users\\miko\\Oocuments\\{log_filename}'
+            source_file_name = f'C:\\Users\\miko\\PycharmProjects\\RSS_scraping\\{log_filename}'
+            # Copy the file from source to destination
+            shutil.copy(source_file_name, one_drive_backup)
+
+            print(f"File '{source_file_name}' copied to '{one_drive_backup}'.")
+        except:
+            print(f"Error while File '{source_file_name}' copied to '{one_drive_backup}'.")
+
+        # sent_file_by_mail(source_file_name, receiver_email)
 
 
 
